@@ -19,12 +19,21 @@ int i2c_write (int fd, uint16_t reg_addr, uint8_t reg_data)
 {
 	uint8_t buf[34];
 
-	buf[0] = (reg_addr >> 8) & 0xFF;
-	buf[1] = (reg_addr) & 0xFF;
-	buf[2] = (reg_data) & 0xFF;
+	// write page
+	buf[0] = 0x01;
+	buf[1] = (reg_addr >> 8) & 0xFF;
 
-	if (write(fd, buf, 3) != 3) {
-		printf ("Error during write\n");
+	if (write(fd, buf, 2) != 2) {
+		printf ("Error during page set: %04X, %02X\n", reg_addr, reg_data);
+		exit(1);
+	}
+
+	// write data
+	buf[0] = (reg_addr) & 0xFF;
+	buf[1] = (reg_data) & 0xFF;
+
+	if (write(fd, buf, 2) != 2) {
+		printf ("Error during data write: %04X, %02X\n", reg_addr, reg_data);
 		exit(1);
 	}
 
@@ -67,4 +76,5 @@ int main (int argc, char *argv[])
 
 	return error;
 }
+
 
