@@ -8,13 +8,6 @@
 #include <linux/i2c-dev.h>
 #include "ECM1900-Si5341-Regs.h"
 
-/*
-int i2c_read (uint16_t reg_addr, uint8_t* reg_data)
-{
-
-}
-*/
-
 int i2c_write (int fd, uint16_t reg_addr, uint8_t reg_data)
 {
 	uint8_t buf[34];
@@ -51,7 +44,7 @@ int main (int argc, char *argv[])
 	char filename[20];
 
 	if (argc != 2) {
-		printf("Usage: i2cread [i2c device]\n");
+		printf("Usage: %s [i2c device]\n", argv[0]);
 		exit(1);
 	}
 
