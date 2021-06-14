@@ -44,6 +44,7 @@ Simply replace the current `ECM1900-Si5341-Regs.h` header file with
 the new header file containing the new register settings.
  
 Usage: si5341-ecm [i2c device]
+
 Example: si5341-ecm /dev/i2c-0
 
 Note: The provided Opal Kelly linux image for the ECM1900 has the `si5341-ecm` application along 
