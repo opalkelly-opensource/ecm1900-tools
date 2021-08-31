@@ -38,10 +38,10 @@
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 
-#define SUPPLY_28 0
-#define SUPPLY_67 1
+#define SUPPLY_87_88 1
 #define SUPPLY_68 2
-#define SUPPLY_87_88 3
+#define SUPPLY_67 3
+#define SUPPLY_28 4
 
 #define PCAL_ADDR 0x20
 
@@ -71,10 +71,10 @@ szgSmartVIOConfig svio = {
 			0x00, // attr
 			0x00, // port_attr
 			1,    // doublewide_mate
-			1,    // range_count
-			{ {120, 120}, {150,150}, {180,180}, {330,330} } // ranges
+			6,    // range_count
+			{ {120, 120}, {125, 125}, {150,150}, {180,180}, {250, 250}, {330,330} } // ranges
 		}, {
-			0x48, // i2c_addr
+			0x30, // i2c_addr
 			0,    // present
 			0,    // group
 			0,    // req_ver_major
@@ -94,10 +94,10 @@ szgSmartVIOConfig svio = {
 			0x00, // attr
 			0x00, // port_attr
 			1,    // doublewide_mate
-			1,    // range_count
+			4,    // range_count
 			{ {120, 120}, {125,125}, {150,150}, {180,180} } // ranges
 		}, {
-			0x49, // i2c_addr
+			0x31, // i2c_addr
 			0,    // present
 			1,    // group
 			0,    // req_ver_major
@@ -117,10 +117,10 @@ szgSmartVIOConfig svio = {
 			0x00, // attr
 			0x00, // port_attr
 			1,    // doublewide_mate
-			1,    // range_count
+			4,    // range_count
 			{ {120, 120}, {125,125}, {150,150}, {180,180} } // ranges
 		}, {
-			0x50, // i2c_addr
+			0x32, // i2c_addr
 			0,    // present
 			2,    // group
 			0,    // req_ver_major
@@ -131,7 +131,7 @@ szgSmartVIOConfig svio = {
 			0,    // range_count
 			{ {0, 0}, {0,0}, {0,0}, {0,0} } // ranges
 		}, {
-			0x52, // i2c_addr
+			0x34, // i2c_addr
 			0,    // present
 			2,    // group
 			0,    // req_ver_major
@@ -151,10 +151,10 @@ szgSmartVIOConfig svio = {
 			0x00, // attr
 			0x00, // port_attr
 			1,    // doublewide_mate
-			1,    // range_count
+			4,    // range_count
 			{ {120, 120}, {125,125}, {150,150}, {180,180} } // ranges
 		}, {
-			0x51, // i2c_addr
+			0x33, // i2c_addr
 			0,    // present
 			3,    // group
 			0,    // req_ver_major
@@ -165,7 +165,7 @@ szgSmartVIOConfig svio = {
 			0,    // range_count
 			{ {0, 0}, {0,0}, {0,0}, {0,0} } // ranges
 		}, {
-			0x53, // i2c_addr
+			0x35, // i2c_addr
 			0,    // present
 			3,    // group
 			0,    // req_ver_major
@@ -178,6 +178,71 @@ szgSmartVIOConfig svio = {
 		}
 	}
 };
+
+// Write to I2C with either a 16- or 8-bit address
+int i2cWriteDNA (int i2c_file, int i2c_addr, uint16_t sub_addr,
+              int sub_addr_length, int length, uint8_t data[32])
+{
+	uint8_t *buffer = (uint8_t *)malloc((length * sizeof(uint8_t)) + sub_addr_length);
+	int i;
+
+	memcpy(buffer + sub_addr_length, data, length * sizeof(uint8_t));
+
+	// Set I2C address
+	if (ioctl(i2c_file, I2C_SLAVE, i2c_addr) < 0) {
+		return -1;
+	}
+
+	if (sub_addr_length == 2) {
+		buffer[0] = (sub_addr >> 8) & 0xFF;
+		buffer[1] = sub_addr & 0xFF;
+	} else {
+		buffer[0] = sub_addr & 0xFF;
+	}
+
+	for (i = 0; i < I2C_CHECK_COUNT; i++) {
+		// The DNA Spec allows an MCU to NAK subsequent writes when multiple
+		// writes are performed, keep trying for I2C_CHECK_COUNT tries before
+		// giving up.
+		if (write(i2c_file, buffer, sub_addr_length + length)
+		      == (length + sub_addr_length)) {
+			return 0;
+		}
+	}
+
+	// We gave up trying to write
+	return -1;
+}
+
+
+// Read from I2C with either a 16- or 8-bit address
+int i2cReadDNA (int i2c_file, int i2c_addr, uint16_t sub_addr,
+             int sub_addr_length, int length, uint8_t data[32])
+{
+	uint8_t temp_buf[2];
+
+	// Set I2C address
+	if (ioctl(i2c_file, I2C_SLAVE, i2c_addr) < 0) {
+		return -1;
+	}
+
+	if (sub_addr_length == 2) {
+		temp_buf[0] = (sub_addr >> 8) & 0xFF;
+		temp_buf[1] = sub_addr & 0xFF;
+	} else {
+		temp_buf[0] = sub_addr & 0xFF;
+	}
+
+	if (write(i2c_file, temp_buf, sub_addr_length) != sub_addr_length) {
+		return -1;
+	}
+
+	if (read(i2c_file, data, length) != length) {
+		return -1;
+	}
+
+	return 0;
+}
 
 // Detect if a device is on a given I2C address, returns 0 if present
 int i2cDetect (int i2c_file, int i2c_addr)
@@ -204,7 +269,13 @@ int i2c_write (int fd, uint8_t reg_addr, uint8_t reg_data)
 {
 	uint8_t buf[34];
 
-	printf("Writing to %02X: %02X\n", reg_addr, reg_data);
+	if (ioctl(fd, I2C_SLAVE, PCAL_ADDR) < 0) {
+		printf("Error during I2C address set\n");
+		exit(1);
+	}
+	
+	//Good for debugging:
+	//printf("Writing to %02X: %02X\n", reg_addr, reg_data);
 
 	// write I2C register
 	buf[0] = reg_addr;
@@ -223,7 +294,13 @@ int i2c_read (int fd, uint16_t reg_addr, uint8_t* reg_data)
 {
 	uint8_t buf[2];
 
-	printf("Reading from %02X\n", reg_addr);
+	if (ioctl(fd, I2C_SLAVE, PCAL_ADDR) < 0) {
+		printf("Error during I2C address set\n");
+		exit(1);
+	}
+	
+	//Good for debugging:
+	//printf("Reading from %02X\n", reg_addr);
 
 	buf[0] = reg_addr;
 
@@ -381,7 +458,7 @@ int writeMCU (int i2c_file, uint16_t port_addr, int sub_addr, uint8_t *data,
 	while (length > 0) {
 		temp_length = (length > 32) ? 32 : length;
 
-		if (i2cWrite(i2c_file, port_addr, current_sub_addr, 2, temp_length,
+		if (i2cWriteDNA(i2c_file, port_addr, current_sub_addr, 2, temp_length,
 		             &data[(current_sub_addr - sub_addr)]) != 0) {
 			return -1;
 		}
@@ -407,8 +484,8 @@ int readMCU (int i2c_file, uint16_t port_addr, int sub_addr, uint8_t *data,
 	while (length > 0) {
 		temp_length = (length > 32) ? 32 : length;
 
-		if (i2cRead(i2c_file, port_addr, current_sub_addr, 2, temp_length,
-		            &data[(current_sub_addr - sub_addr)]) != 0) {
+		if (i2cReadDNA(i2c_file, port_addr, current_sub_addr, 2, temp_length,
+		            &data[(current_sub_addr - sub_addr)]) != 0) {		
 			return -1;
 		}
 
@@ -425,7 +502,7 @@ int dumpDNA (int i2c_file, uint16_t port_addr, uint8_t *data)
 {
 	uint16_t dna_length;
 
-	if (i2cRead(i2c_file, port_addr, 0x8000, 2, 2, (uint8_t *)&dna_length) != 0) {
+	if (i2cReadDNA(i2c_file, port_addr, 0x8000, 2, 2, (uint8_t *)&dna_length) != 0) {
 		return -1;
 	}
 
@@ -459,7 +536,10 @@ int readDNA (int i2c_file, uint32_t *svio1, uint32_t *svio2, uint32_t *svio3, ui
 			// Device is not present
 			continue;
 		}
-
+		
+		//Good for debugging:
+		//printf("Found device: %d\n", svio.ports[i].i2c_addr);
+		
 		// Read the full DNA Header
 		if (readMCU(i2c_file, svio.ports[i].i2c_addr, 0x8000, dna_buf,
 		            SZG_DNA_HEADER_LENGTH_V1) != 0) {
@@ -475,10 +555,7 @@ int readDNA (int i2c_file, uint32_t *svio1, uint32_t *svio2, uint32_t *svio3, ui
 				case 0:
 					svio.ports[0].ranges[0].min = 250;
 					svio.ports[0].ranges[0].max = 250;
-					break;
-				case 1:
-					svio.ports[2].ranges[0].min = 250;
-					svio.ports[2].ranges[0].max = 250;
+					printf("LVDS attribute found for pod, setting voltage to 250\n");
 					break;
 			}
 		}
@@ -491,11 +568,12 @@ int readDNA (int i2c_file, uint32_t *svio1, uint32_t *svio2, uint32_t *svio3, ui
 			svio.svio_results[i] = vmin;
 		}
 	}
-
 	*svio1 = svio.svio_results[0];
 	*svio2 = svio.svio_results[1];
 	*svio3 = svio.svio_results[2];
 	*svio4 = svio.svio_results[3];
+	//Good for debugging:
+	//printf("svio1: %d, svio2: %d, svio3: %d, svio4: %d\n", *svio1, *svio2, *svio3, *svio4);
 
 	return 0;
 }
@@ -505,7 +583,9 @@ int readDNA (int i2c_file, uint32_t *svio1, uint32_t *svio2, uint32_t *svio3, ui
 int applyVIO (int i2c_file, uint32_t svio1, uint32_t svio2, uint32_t svio3, uint32_t svio4)
 {
 	//uint8_t temp_data[2];
-	
+	uint8_t vs0;
+	uint8_t vs1;
+	uint8_t vs2;
 	//The vio index is matched with the bank index, this is for use in the for loop below
 	uint32_t svio_array[4];
 	svio_array[0] = svio1;
@@ -518,20 +598,24 @@ int applyVIO (int i2c_file, uint32_t svio1, uint32_t svio2, uint32_t svio3, uint
 	bank_array[2] = SUPPLY_67;
 	bank_array[3] = SUPPLY_28;
 	// Bounds check to be sure that everything is good to go
-	if ((svio1 < 120) || (svio1 > 330)) {
-		printf("Invalid SmartVIO1 solution\n");
+	if ((svio1 != 120) && (svio1 != 150) && (svio1 != 180) && (svio1 != 330) && (svio1 != 250) && (svio1 != 125)) {
+		printf("Invalid SmartVIO1 solution. Valid solutions are:\n");
+		printf("   VIO1: 120,  125,  150,  180,  250, 330 (Limited by HD bank range 1.2V to 3.3V)\n");
 		exit(EXIT_FAILURE);
 	}
-	if ((svio2 < 120) || (svio2 > 180)) {
-		printf("Invalid SmartVIO2 solution\n");
+	if ((svio2 != 120) && (svio2 != 125) && (svio2 != 150) && (svio2 != 180)) {
+		printf("Invalid SmartVIO2 solution. Valid solutions are:\n");
+		printf("   VIO2: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
 		exit(EXIT_FAILURE);
 	}
-	if ((svio3 < 120) || (svio3 > 180)) {
-		printf("Invalid SmartVIO3 solution\n");
+	if ((svio3 != 120) && (svio3 != 125) && (svio3 != 150) && (svio3 != 180)) {
+		printf("Invalid SmartVIO3 solution. Valid solutions are:\n");
+		printf("   VIO3: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
 		exit(EXIT_FAILURE);
 	}
-	if ((svio4 < 120) || (svio4 > 180)) {
-		printf("Invalid SmartVIO4 solution\n");
+	if ((svio4 != 120) && (svio4 != 125) && (svio4 != 150) && (svio4 != 180)) {
+		printf("Invalid SmartVIO4 solution. Valid solutions are:\n");
+		printf("   VIO4: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
 		exit(EXIT_FAILURE);
 	}
 	for(int i = 0; i < 4; i++){
@@ -559,69 +643,126 @@ int applyVIO (int i2c_file, uint32_t svio1, uint32_t svio2, uint32_t svio3, uint
 			vs0 = 1;
 			vs1 = 0;
 			vs2 = 1;
-		} else if (svio_array[i] == 80) {
-			vs0 = 0;
-			vs1 = 1;
-			vs2 = 1;
 		} else {
-			printf("Voltage setting not supported, options are:\n\
-					3.3  2.5  1.8  1.5  1.25  1.2  0.8\n");
+			printf("Voltage setting not supported, options are:\n");
+			printf("   VIO1: 120,  125,  150,  180,  250, 330 (Limited by HD bank range 1.2V to 3.3V)\n");
+			printf("   VIO2: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+			printf("   VIO3: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+			printf("   VIO4: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
 			return -1;
 		}
 
-		if(disable_supply(i2c_fd, bank_array[i]) != 0){
+		if(disable_supply(i2c_file, bank_array[i]) != 0){
 			printf("Problem disabling bank - %d", bank_array[i]);
 			return -1;
 		}
-		if(set_supply(i2c_fd, bank_array[i], vs0, vs1, vs2) != 0){
+		if(set_supply(i2c_file, bank_array[i], vs0, vs1, vs2) != 0){
 			printf("Problem setting supply to bank - %d", bank_array[i]);
 			return -1;
 		}
-		if(enable_supply(i2c_fd, bank_array[i]) != 0){
+		if(enable_supply(i2c_file, bank_array[i]) != 0){
 			printf("Problem enabling bank - %d", bank_array[i]);
 			return -1;
 		}
+		
+		printf("Set VIO%d to %d (10's of mV)\n", bank_array[i], svio_array[i]);
+	}
+	
 
-	}
-	
-	
-	
-	// Disable write protect on TPS65400
-	//temp_data[0] = 0x20;
-	//if (i2cWrite(i2c_file, 0x6a, 0x10, 1, 1, temp_data) != 0) {
-	//	return -1;
-	//}
-
-	// TPS65400 VREF = VOUT * 531 - 60
-	/*
-	if (svio1 != 0) {
-		printf("Setting VIO1 to: %d\n", svio1);
-		temp_data[0] = 0x0;
-		if (i2cWrite(i2c_file, 0x6a, 0x00, 1, 1, temp_data) != 0) {
-			return -1;
-		}
-		temp_data[0] = svio1 * 531 / 1000 - 60;
-		if (i2cWrite(i2c_file, 0x6a, 0xd8, 1, 1, temp_data) != 0) {
-			return -1;
-		}
-	}
-	if (svio2 != 0) {
-		printf("Setting VIO2 to: %d\n", svio2);
-		temp_data[0] = 0x1;
-		if (i2cWrite(i2c_file, 0x6a, 0x00, 1, 1, temp_data) != 0) {
-			return -1;
-		}
-		temp_data[0] = svio2 * 531 / 1000 - 60;
-		if (i2cWrite(i2c_file, 0x6a, 0xd8, 1, 1, temp_data) != 0) {
-			return -1;
-		}
-	}
-	*/
 	
 	
 	return 0;
 }
 
+// Apply SmartVIO settings to power IC individually. 
+int applyVIOIndividual (int i2c_fd, uint32_t svio, uint32_t voltage)
+{
+	int error = 0;
+	uint8_t vs0, vs1, vs2;
+	int i;
+
+
+
+	if (ioctl(i2c_fd, I2C_SLAVE, PCAL_ADDR) < 0) {
+		printf("Error during I2C address set\n");
+		return -1;
+	}
+
+	if (voltage == 330) {
+		vs0 = 0;
+		vs1 = 0;
+		vs2 = 0;
+	} else if (voltage == 250) {
+		vs0 = 1;
+		vs1 = 0;
+		vs2 = 0;
+	} else if (voltage == 180) {
+		vs0 = 0;
+		vs1 = 1;
+		vs2 = 0;
+	} else if (voltage == 150) {
+		vs0 = 1;
+		vs1 = 1;
+		vs2 = 0;
+	} else if (voltage == 125) {
+		vs0 = 0;
+		vs1 = 0;
+		vs2 = 1;
+	} else if (voltage == 120) {
+		vs0 = 1;
+		vs1 = 0;
+		vs2 = 1;
+	} else {
+		printf("Voltage setting not supported, options are:\n");
+		printf("   VIO1: 120,  125,  150,  180,  250, 330 (Limited by HD bank range 1.2V to 3.3V)\n");
+		printf("   VIO2: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+		printf("   VIO3: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+		printf("   VIO4: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+		return -1;
+	}
+
+	if (svio == 4) {
+		if (vs2 == 0 && vs1 == 0) {
+			printf("Voltage not supported on this rail\n");
+			printf("   VIO4: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+			return -1;
+		}
+		disable_supply(i2c_fd, SUPPLY_28);
+		set_supply(i2c_fd, SUPPLY_28, vs0, vs1, vs2);
+		enable_supply(i2c_fd, SUPPLY_28);
+	} else if (svio == 3) {
+		if (vs2 == 0 && vs1 == 0) {
+			printf("Voltage not supported on this rail\n");
+			printf("   VIO3: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+			return -1;
+		}
+		disable_supply(i2c_fd, SUPPLY_67);
+		set_supply(i2c_fd, SUPPLY_67, vs0, vs1, vs2);
+		enable_supply(i2c_fd, SUPPLY_67);
+	} else if (svio == 2) {
+		if (vs2 == 0 && vs1 == 0) {
+			printf("Voltage not supported on this rail\n");
+			printf("   VIO2: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+			return -1;
+		}
+		disable_supply(i2c_fd, SUPPLY_68);
+		set_supply(i2c_fd, SUPPLY_68, vs0, vs1, vs2);
+		enable_supply(i2c_fd, SUPPLY_68);
+	} else if (svio == 1) {
+		disable_supply(i2c_fd, SUPPLY_87_88);
+		set_supply(i2c_fd, SUPPLY_87_88, vs0, vs1, vs2);
+		enable_supply(i2c_fd, SUPPLY_87_88);
+	} else {
+		printf("Error: unrecognized supply rail, options are:\n");
+		printf("   1 (VCCO_87_88)\n");
+		printf("   2 (VCCO_68\n");
+		printf("   3 (VCCO_67\n");
+		printf("   4 (VCCO_28)\n");
+		return -1;
+	}
+	printf("Set VIO%d to %d (10's of mV)\n", svio, voltage);
+	return 0;
+}
 
 // Print strings, Read DNA must have been run first to populate the svio struct
 int printVIOStrings (json &json_handler, int i2c_file)
@@ -732,33 +873,39 @@ void printHelp (char *progname)
 {
 	printf("Usage: %s [option [argument]] <i2c device>\n", progname);
 	printf("  <i2c device> is required for all commands. It must contain the\n");
-	printf("               path to the Linux i2c device\n");
+	printf("               path to the Linux i2c device. '/dev/i2c-0' should be used on the ECM1900\n");
 	printf("\n");
 	printf("  Exactly one of the following options must be specified:\n");
 	printf("    -r - run smartVIO, queries attached MCU's and sets voltages accordingly\n");
-	printf("    -s - set VIO voltages to the values provided by -1 and -2 options\n");
+	printf("    -s - set VIO voltages to the values provided by -1, -2, -3, -4 options (Can only set one at a time)\n");
 	printf("    -j - print out a JSON object with DNA and SmartVIO information\n");
-	printf("    -h - print this text\n");
+	printf("    -h - print this help text\n");
 	printf("    -w <filename> - write a binary DNA to a peripheral, takes the DNA filename\n");
 	printf("                    as an argument\n");
 	printf("    -d <filename> - dump the DNA from a peripheral to a binary file, takes the\n");
 	printf("                    DNA filename as an argument\n");
 	printf("\n");
 	printf("  The following options may be used in conjunction with the above options:\n");
-	printf("    -1 <vio1> - Sets the voltage for VIO1(SUPPLY_87_88)\n");
-	printf("    -2 <vio2> - Sets the voltage for VIO2(SUPPLY_68)\n");
-	printf("    -3 <vio3> - Sets the voltage for VIO3(SUPPLY_67)\n");
-	printf("    -4 <vio4> - Sets the voltage for VIO4(SUPPLY_28)\n");
-	printf("          <vio1> and <vio2> must be specified as numbers in 10's of mV\n");
+	printf("    -1 <vio1> - Sets the voltage for VIO1(VCCO_87_88)\n");
+	printf("    -2 <vio2> - Sets the voltage for VIO2(VCCO_68)\n");
+	printf("    -3 <vio3> - Sets the voltage for VIO3(VCCO_67)\n");
+	printf("    -4 <vio4> - Sets the voltage for VIO4(VCCO_28)\n");
+	printf("          *<vio1-4> must be specified as numbers in 10's of mV\n");
+	printf("                  *You may only set one voltage at a time\n");
+	printf("                  *The valid discrete voltage supplies provided by the power supply on the ECM1900 are:\n");
+	printf("                  VIO1: 120,  125,  150,  180,  250, 330 (Limited by HD bank range 1.2V to 3.3V)\n");
+	printf("                  VIO2: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+	printf("                  VIO3: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
+	printf("                  VIO4: 120,  125,  150,  180 (Limited by HP bank range 1.0V to 1.8V)\n");
 	printf("    -p <number> - Specifies the peripheral number for the -w or -d options\n");
 	printf("\n");
 	printf("  Examples:\n");
 	printf("    Run SmartVIO sequence:\n");
-	printf("      %s -r /dev/i2c-1\n", progname);
+	printf("      %s -r /dev/i2c-0\n", progname);
 	printf("    Dump DNA from the MCU on Port 1:\n");
-	printf("      %s -d dna_file.bin -p 1 /dev/i2c-1\n", progname);
+	printf("      %s -d dna_file.bin -p 1 /dev/i2c-0\n", progname);
 	printf("    Set VIO1 to 3.3V:\n");
-	printf("      %s -s -1 330 /dev/i2c-1\n", progname);
+	printf("      %s -s -1 330 /dev/i2c-0\n", progname);
 }
 
 
@@ -784,8 +931,10 @@ int main (int argc, char *argv[])
 	int periph_num = 0;
 	int curr_opt;
 	json json_handler;
-	uint16_t peripheral_address[] = {0x48, 0x49, 0x50, 0x51, 0x52, 0x53};
-
+	uint16_t peripheral_address[] = {0x30, 0x31, 0x32, 0x33, 0x34, 0x35};
+	bool takeOne = true;
+	int rail;
+	int voltage;
 	// Parse args
 	while ((curr_opt = getopt(argc, argv, "rsj1:2:w:d:p:h")) != -1) {
 		switch(curr_opt)
@@ -800,34 +949,62 @@ int main (int argc, char *argv[])
 				jflag = 1;
 				break;
 			case '1':
-				if (optarg){ 
-					svio1 = atoi(optarg);
+				if (takeOne){
+					takeOne = false;
+					if (optarg){ 
+						voltage = atoi(optarg);
+						rail = 1;
+					} else {
+						printf("No argument specified for -1\n");
+						exit(EXIT_FAILURE);
+					}
 				} else {
-					printf("No argument specified for -1\n");
+					printf("Can only set one VIO at a time.\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
 			case '2':
-				if (optarg){ 
-					svio2 = atoi(optarg);
+				if (takeOne){
+					takeOne = false;
+					if (optarg){ 
+						voltage = atoi(optarg);
+						rail = 2;
+					} else {
+						printf("No argument specified for -1\n");
+						exit(EXIT_FAILURE);
+					}
 				} else {
-					printf("No argument specified for -2\n");
+					printf("Can only set one VIO at a time.\n");
 					exit(EXIT_FAILURE);
 				}
-				break;
+				break;;
 			case '3':
-				if (optarg){ 
-					svio3 = atoi(optarg);
+				if (takeOne){
+					takeOne = false;
+					if (optarg){ 
+						voltage = atoi(optarg);
+						rail = 3;
+					} else {
+						printf("No argument specified for -1\n");
+						exit(EXIT_FAILURE);
+					}
 				} else {
-					printf("No argument specified for -3\n");
+					printf("Can only set one VIO at a time.\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
 			case '4':
-				if (optarg){ 
-					svio4 = atoi(optarg);
+				if (takeOne){
+					takeOne = false;
+					if (optarg){ 
+						voltage = atoi(optarg);
+						rail = 4;
+					} else {
+						printf("No argument specified for -1\n");
+						exit(EXIT_FAILURE);
+					}
 				} else {
-					printf("No argument specified for -4\n");
+					printf("Can only set one VIO at a time.\n");
 					exit(EXIT_FAILURE);
 				}
 				break;
@@ -924,8 +1101,8 @@ int main (int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	} else if (sflag == 1) { // Apply a user specified VIO
-		if (applyVIO(i2c_file, svio1, svio2, svio3, svio4) != 0) {
-			printf("Error applying SmartVIO settings to power supplies\n");
+		if (applyVIOIndividual(i2c_file, rail, voltage) != 0) {
+			printf("Error applying Individual SmartVIO settings to power supplies\n");
 			exit(EXIT_FAILURE);
 		}
 	} else if (jflag == 1) {
@@ -946,7 +1123,7 @@ int main (int argc, char *argv[])
 
 		printVIOStrings(json_handler, i2c_file);
 
-		printf(json_handler.dump().c_str());
+		printf("%s\n", json_handler.dump().c_str());
 		printf("\n");
 	} else if (wflag == 1) { // Write DNA from a file to a peripheral
 		if (read(dna_file, &dna_length, 2) != 2) {
@@ -989,3 +1166,4 @@ int main (int argc, char *argv[])
 
 	return 0;
 }
+

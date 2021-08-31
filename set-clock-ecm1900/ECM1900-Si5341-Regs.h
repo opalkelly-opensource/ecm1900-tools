@@ -10,7 +10,7 @@
  * Design ID:                                          TSTECM
  * Includes Pre/Post Download Control Register Writes: Yes
  * Created By:                                         ClockBuilder Pro v2.45 [2020-07-16]
- * Timestamp:                                          2020-10-15 16:00:20 GMT-07:00
+ * Timestamp:                                          2020-10-21 16:31:58 GMT-07:00
  *
  * A complete design report corresponding to this export is included at the end 
  * of this header file.
@@ -181,7 +181,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
 	{ 0x024D, 0x03 },
 	{ 0x024E, 0x00 },
 	{ 0x024F, 0x00 },
-	{ 0x0250, 0x04 },
+	{ 0x0250, 0x03 },
 	{ 0x0251, 0x00 },
 	{ 0x0252, 0x00 },
 	{ 0x0253, 0x04 },
@@ -445,7 +445,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * Project File:       C:\Users\Tom\Downloads\Si5341-RevD-TSTECM-Project.slabtimeproj
  * Design ID:          TSTECM
  * Created By:         ClockBuilder Pro v2.45 [2020-07-16]
- * Timestamp:          2020-10-15 16:00:20 GMT-07:00
+ * Timestamp:          2020-10-21 16:31:58 GMT-07:00
  * 
  * Design Rule Check
  * =================
@@ -505,7 +505,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *          Enabled, LVDS 3.3 V
  *    OUT1: 125 MHz
  *          Enabled, LVDS 3.3 V
- *    OUT2: 100 MHz
+ *    OUT2: 125 MHz
  *          Enabled, LVDS 3.3 V
  *    OUT3: 100 MHz
  *          Enabled, LVDS 3.3 V
@@ -543,7 +543,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *       Value: 14
  *       OUT0: 125 MHz
  *       OUT1: 125 MHz
- *       OUT2: 100 MHz
+ *       OUT2: 125 MHz
  *       OUT3: 100 MHz
  *       OUT4: 100 MHz
  *       OUT6: 125 MHz
@@ -562,7 +562,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * R dividers:
  *    R0 = 8
  *    R1 = 8
- *    R2 = 10
+ *    R2 = 8
  *    R3 = 10
  *    R4 = 10
  *    R5 = 6
@@ -601,11 +601,11 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 
  *          Frequency  Format   Voltage   Current     Power
  *         ----------  ------  --------  --------  --------
- * VDD                            1.8 V  149.0 mA    268 mW
+ * VDD                            1.8 V  149.1 mA    268 mW
  * VDDA                           3.3 V  114.4 mA    377 mW
  * VDDO0      125 MHz  LVDS       3.3 V   15.6 mA     51 mW
  * VDDO1      125 MHz  LVDS       3.3 V   15.6 mA     51 mW
- * VDDO2      100 MHz  LVDS       3.3 V   15.5 mA     51 mW
+ * VDDO2      125 MHz  LVDS       3.3 V   15.6 mA     51 mW
  * VDDO3      100 MHz  LVDS       3.3 V   15.5 mA     51 mW
  * VDDO4      100 MHz  LVDS       3.3 V   15.5 mA     51 mW
  * VDDO5   100.04 MHz  LVDS       3.3 V   15.5 mA     51 mW
@@ -614,7 +614,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * VDDO8      125 MHz  LVDS       3.3 V   15.6 mA     51 mW
  * VDDO9       Unused                                      
  *                                       --------  --------
- *                                Total  403.1 mA   1.107 W
+ *                                Total  403.3 mA   1.107 W
  * 
  * Note:
  * 
@@ -807,7 +807,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 0x023B[31:0]  M_DEN                2147483648         0x80000000       
  * 0x024A[23:0]  R0_REG               3                  0x000003         
  * 0x024D[23:0]  R1_REG               3                  0x000003         
- * 0x0250[23:0]  R2_REG               4                  0x000004         
+ * 0x0250[23:0]  R2_REG               3                  0x000003         
  * 0x0253[23:0]  R3_REG               4                  0x000004         
  * 0x0256[23:0]  R4_REG               4                  0x000004         
  * 0x0259[23:0]  R5_REG               2                  0x000002         
