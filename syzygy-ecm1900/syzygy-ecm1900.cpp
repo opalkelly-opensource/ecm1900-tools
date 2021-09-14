@@ -890,7 +890,7 @@ void printHelp (char *progname)
 	printf("    -2 <vio2> - Sets the voltage for VIO2(VCCO_68)\n");
 	printf("    -3 <vio3> - Sets the voltage for VIO3(VCCO_67)\n");
 	printf("    -4 <vio4> - Sets the voltage for VIO4(VCCO_28)\n");
-	printf("          *<vio1-4> must be specified as numbers in 10's of mV\n");
+	printf("                  *<vioX> must be specified as numbers in 10's of mV\n");
 	printf("                  *You may only set one voltage at a time\n");
 	printf("                  *The valid discrete voltage supplies provided by the power supply on the ECM1900 are:\n");
 	printf("                  VIO1: 120,  125,  150,  180,  250, 330 (Limited by HD bank range 1.2V to 3.3V)\n");
@@ -1166,4 +1166,3 @@ int main (int argc, char *argv[])
 
 	return 0;
 }
-
