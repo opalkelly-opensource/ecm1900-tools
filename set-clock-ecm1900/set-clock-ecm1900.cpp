@@ -8,6 +8,13 @@
 #include <linux/i2c-dev.h>
 #include "ECM1900-Si5341-Regs.h"
 
+/*
+int i2c_read (uint16_t reg_addr, uint8_t* reg_data)
+{
+
+}
+*/
+
 int i2c_write (int fd, uint16_t reg_addr, uint8_t reg_data)
 {
 	uint8_t buf[34];
@@ -69,5 +76,7 @@ int main (int argc, char *argv[])
 
 	return error;
 }
+
+
 
 

@@ -57,6 +57,9 @@
 // Maximum number of SmartVIO ranges defined in the DNA header.
 #define SZG_MAX_DNA_RANGES                  (4)
 
+// Maximum number of SmartVIO ranges to search in manually defined FPGA port.
+#define SZG_MAX_FPGA_RANGES                  (6)
+
 // Maximum length of an I2C read supported by the DNA firmware.
 #define SZG_MAX_DNA_I2C_READ_LENGTH         (32)
 #define SZG_DNA_HEADER_LENGTH_V1            (40)
@@ -105,7 +108,7 @@ typedef struct {
 	// doublewide peripheral is connected
 	int                doublewide_mate;
 	int                range_count;
-	szgSmartVIORange   ranges[SZG_MAX_DNA_RANGES];
+	szgSmartVIORange   ranges[SZG_MAX_FPGA_RANGES];
 	unsigned int       mfr_offset;
 	unsigned int       mfr_length;
 	unsigned int       product_name_offset;
@@ -136,3 +139,4 @@ int szgParsePortDNA(int n, szgSmartVIOConfig *svio, unsigned char *dnaBuf, int l
 int szgSolveSmartVIOGroup(szgSmartVIOPort *ports, int group_mask);
 
 unsigned short szgComputeCRC(const unsigned char *data, unsigned int length);
+
