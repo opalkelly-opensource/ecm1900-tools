@@ -1,3 +1,6 @@
+# * Repository moved to design-resources *
+[ECM1900 Tools new location](https://github.com/opalkelly-opensource/design-resources/tree/main/BoardTools/BRK1900/PetaLinux)
+
 # ECM1900 Tools
 
 ## Overview
