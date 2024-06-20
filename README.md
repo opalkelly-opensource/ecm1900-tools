@@ -76,7 +76,7 @@ Usage: syzygy-ecm1900 [option [argument]] <i2c device>
 The `set-clock-ecm1900` application, along with the `ECM1900-Si5341-Regs.h` ClockBuilder Pro 
 configuration register export header file, applies the default clock settings for the Si5341
 on the ECM1900. The default clock frequencies set by this header file can be found in the ECM1900
-[Clock Generator](https://docs.opalkelly.com/display/ECM1900/Clock+Generator)
+[Clock Generator](https://docs.opalkelly.com/ecm1900/clock-generator/)
 documentation.
 ```
 Usage: set-clock-ecm1900 [i2c device]
@@ -95,14 +95,14 @@ These build sources can be found in the `/home/root/tools` directory of the prov
 Note: The provided Opal Kelly linux image for the ECM1900 has the `set-clock-ecm1900` application 
 along with the default `ECM1900-Si5341-Regs.h` baked in. This application is run in the boot 
 process to configure the clocks at startup. If you require new configuration settings to be run 
-at startup, follow the instructions located at [Linux Image](https://docs.opalkelly.com/display/ECM1900/Linux+Image)
+at startup, follow the instructions located at [Linux Image](https://docs.opalkelly.com/ecm1900/linux-image/)
 
 ### set-clock-brk1900 Application
 
 The `set-clock-brk1900` application, along with the `BRK1900-Si5338-Regs.h` ClockBuilder Pro 
 configuration register export header file, applies the default clock settings for the Si5338 
 on the ECM1900. The default clock frequencies set by this header file can be found under 
-‘Si5338 Programmable Clock’ at [BRK1900 Peripherals](https://docs.opalkelly.com/display/ECM1900/BRK1900+Peripherals)
+‘Si5338 Programmable Clock’ at [BRK1900 Peripherals](https://docs.opalkelly.com/ecm1900/brk1900-breakout-board/brk1900-peripherals/)
 ```
 Usage: set-clock-brk1900 [i2c device]
 Example: set-clock-brk1900 /dev/i2c-0
@@ -120,7 +120,7 @@ These build sources can be found in the `/home/root/tools` directory of the prov
 Note: The provided Opal Kelly linux image for the BRK1900 has the `set-clock-brk1900` application 
 along with the default `BRK1900-Si5338-Regs.h` baked in. This application is run in the boot 
 process to configure the clocks at startup. If you require new configuration settings to be run 
-at startup, follow the instructions located at [BRK1900 Linux Image](https://docs.opalkelly.com/display/ECM1900/BRK1900+Linux+Image)
+at startup, follow the instructions located at [BRK1900 Linux Image](https://docs.opalkelly.com/ecm1900/brk1900-breakout-board/brk1900-linux-image/)
 
 ## Building
 
